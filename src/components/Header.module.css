@@ -1,0 +1,310 @@
+/* Premium Floating Command Center */
+
+.header {
+  position: sticky;
+  top: 24px;
+  z-index: 50;
+  margin: 0 32px;
+  padding: 16px 28px;
+  background: rgba(18, 18, 20, 0.75);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 0 80px -20px rgba(139, 92, 246, 0.15);
+  transition: all var(--transition-slow);
+}
+
+.header:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    0 30px 60px -12px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 0 100px -25px rgba(139, 92, 246, 0.2);
+  transform: translateY(-2px);
+}
+
+.container {
+  max-width: 1600px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* Branding */
+.branding {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+}
+
+.logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-backlog-accent) 0%, var(--color-in-progress-accent) 50%, var(--color-done-accent) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 800;
+  font-size: 20px;
+  box-shadow: 
+    0 8px 24px -12px var(--color-backlog-accent),
+    0 0 40px -20px var(--color-backlog-accent);
+  transition: all var(--transition-spring);
+}
+
+.branding:hover .logo {
+  transform: translateY(-2px) scale(1.04) rotate(4deg);
+  box-shadow: 
+    0 12px 32px -14px var(--color-in-progress-accent),
+    0 0 60px -24px var(--color-in-progress-accent);
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brandTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Action Buttons Container */
+.actionButtons {
+  display: flex;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.actionButton {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--transition-fast);
+}
+
+.actionButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.actionButton:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-primary);
+  transform: translateY(-1px);
+}
+
+.actionButton.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.actionButtonIcon {
+  font-size: 16px;
+}
+
+/* Reset Button */
+.resetButton {
+  padding: 10px 18px;
+  border: 1px solid var(--color-danger-light);
+  border-radius: 14px;
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-danger);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.resetButton:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -10px rgba(239, 68, 68, 0.3);
+}
+
+.resetButtonIcon {
+  font-size: 15px;
+}
+
+/* Data Health Badge */
+.healthBadge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  box-shadow: 0 4px 20px -8px rgba(16, 185, 129, 0.2);
+  transition: all var(--transition-fast);
+}
+
+.healthBadge:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.healthIndicator {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--color-done-accent) 0%, #059669 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 4px 12px -4px var(--color-done-accent);
+}
+
+.healthText {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6ee7b7;
+}
+
+.healthTextDesktop {
+  display: inline;
+}
+
+.healthTextMobile {
+  display: none;
+}
+
+/* Responsive Header */
+@media (max-width: 900px) {
+  .header {
+    margin: 16px;
+    padding: 14px 20px;
+    border-radius: 24px;
+  }
+  
+  .logo {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+  }
+  
+  .brandTitle {
+    font-size: 15px;
+  }
+  
+  .container {
+    justify-content: center;
+    gap: 16px;
+  }
+  
+  .controls {
+    justify-content: center;
+    gap: 8px;
+  }
+  
+  .actionButtons {
+    gap: 4px;
+    padding: 4px;
+    border-radius: 14px;
+  }
+  
+  .actionButton {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+  
+  .resetButton {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  
+  .healthBadge {
+    padding: 8px 14px;
+    gap: 8px;
+  }
+  
+  .healthIndicator {
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
+  
+  .healthTextDesktop {
+    display: none;
+  }
+  
+  .healthTextMobile {
+    display: inline;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    margin: 8px;
+    padding: 10px;
+  }
+
+  .container {
+    gap: 10px;
+  }
+  
+  .controls {
+    width: 100%;
+    justify-content: center;
+    gap: 6px;
+  }
+  
+  .actionButton {
+    padding: 6px 8px;
+  }
+  
+  .actionButton .actionButtonText {
+    display: none;
+  }
+  
+  .resetButton {
+    padding: 6px 8px;
+  }
+
+  .resetButton .resetButtonText {
+    display: none;
+  }
+}
