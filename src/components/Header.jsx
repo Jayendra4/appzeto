@@ -77,7 +77,9 @@ const Header = ({ onReset }) => {
           </div>
           
           {/* Data Health Badge */}
-          <DataHealthBadge />
+       <div className={styles.desktopOnly}>
+  <DataHealthBadge />
+</div>
           
           {/* Reset Button */}
           <button 

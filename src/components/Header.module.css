@@ -308,3 +308,12 @@
     display: none;
   }
 }
+.desktopOnly {
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .desktopOnly {
+    display: none;
+  }
+}
