@@ -34,6 +34,7 @@ const Header = ({ onReset }) => {
 
   return (
     <header className={styles.header}>
+      <div className={styles.headerInner}>
       <div className={styles.container}>
         {/* Branding */}
         <div className={styles.branding}>
@@ -90,7 +91,8 @@ const Header = ({ onReset }) => {
             <span className={styles.resetButtonText}>Reset</span>
           </button>
         </div>
-      </div>
+      </div>{/* .container */}
+      </div>{/* .headerInner */}
     </header>
   );
 };

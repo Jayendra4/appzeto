@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import CursorSpotlight from '../components/CursorSpotlight';
 import { useKanban } from '../context/KanbanContext';
@@ -32,38 +32,13 @@ const getInitials = (name) => {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 };
 
-// Translate a destination index from the filtered-visible column array
-// into the equivalent index in the full (unfiltered) column array.
-// Required because DnD reports indices relative to what is rendered,
-// but the reducer operates on the complete task list.
-const mapFilteredIndexToFull = (taskId, destIndex, allTasks, filteredTasks, status) => {
-  // Full column without the moved card
-  const fullColWithoutMoved = getColumnTasks(allTasks, status).filter(t => t.id !== taskId);
-  // Filtered column without the moved card
-  const filteredColWithoutMoved = getColumnTasks(filteredTasks, status).filter(t => t.id !== taskId);
-
-  // No visible tasks or dropped at position 0 → find index of first visible in full
-  if (destIndex === 0) {
-    if (filteredColWithoutMoved.length === 0) return 0;
-    const firstVisible = filteredColWithoutMoved[0];
-    return fullColWithoutMoved.findIndex(t => t.id === firstVisible.id);
-  }
-
-  // Dropped after the task at (destIndex - 1) in filtered view
-  const prevVisible = filteredColWithoutMoved[destIndex - 1];
-  if (!prevVisible) return fullColWithoutMoved.length; // past the end
-
-  return fullColWithoutMoved.findIndex(t => t.id === prevVisible.id) + 1;
-};
-
 const Dashboard = () => {
   const { 
     tasks, 
     filters,
     setFilters,
     moveTask, 
-    reorderTask,
-    resetBoard
+    reorderTask 
   } = useKanban();
   
   // Local state for search input (immediate updates)
@@ -74,29 +49,18 @@ const Dashboard = () => {
   // Active tab for mobile view
   const [activeTab, setActiveTab] = useState(STATUS_ORDER[0]);
   
-  // Is mobile? Check window width matching the CSS media query
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia('(max-width: 900px)').matches;
-    }
-    return false;
-  });
+  // Is mobile? Check window width (900px breakpoint)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 900);
 
-  // Listen to window resize using matchMedia
+  // Listen to window resize
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 900px)');
-    
-    // Initial check
-    setIsMobile(mediaQuery.matches);
-    
-    const handleMediaQueryChange = (e) => {
-      setIsMobile(e.matches);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 900);
     };
-
-    // Use addEventListener (modern browsers)
-    mediaQuery.addEventListener('change', handleMediaQueryChange);
-    return () => mediaQuery.removeEventListener('change', handleMediaQueryChange);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
+  
   
   const uniqueAssignees = Array.from(new Set(tasks.map(task => task.assignee))).sort();
   
@@ -111,7 +75,7 @@ const Dashboard = () => {
   const filteredTasks = getFilteredTasks(tasks, filters);
 
   // Handle drag and drop end event
-  const handleDragEnd = useCallback((result) => {
+  const handleDragEnd = (result) => {
     const { destination, source, draggableId } = result;
     
     // If no destination, do nothing
@@ -129,32 +93,23 @@ const Dashboard = () => {
     const destinationStatus = destination.droppableId;
     const sourceStatus = source.droppableId;
     
-    // Cross-column move
+    // If moving to a different column, check WIP limits
     if (destinationStatus !== sourceStatus) {
       const wipCheck = canMoveToColumn(tasks, destinationStatus, taskId);
       if (!wipCheck.allowed) {
         toast.error(wipCheck.message);
         return;
       }
+      // If allowed, move the task
       moveTask(taskId, destinationStatus);
-      // On mobile, follow the card to its new column
+      // For mobile view: if moving to different column, switch to that column!
       setActiveTab(destinationStatus);
       return;
     }
     
-    // Same-column reorder:
-    // destination.index is relative to the RENDERED (filtered) list.
-    // Translate it to the full column index so the reducer places the
-    // card in the correct position even when filters hide some cards.
-    const fullDestIndex = mapFilteredIndexToFull(
-      taskId,
-      destination.index,
-      tasks,
-      filteredTasks,
-      sourceStatus
-    );
-    reorderTask(taskId, fullDestIndex, sourceStatus);
-  }, [tasks, filteredTasks, moveTask, reorderTask]);
+    // If same column, reorder
+    reorderTask(taskId, destination.index, sourceStatus);
+  };
   
   // Toggle assignee filter
   const toggleAssignee = (assignee) => {
@@ -164,113 +119,26 @@ const Dashboard = () => {
     setFilters({ assignees: newAssignees });
   };
 
-  // Reset with confirmation to prevent accidental data loss
-  const handleReset = () => {
-    if (window.confirm('Reset the board to its original state? All moves and history will be lost.')) {
-      resetBoard();
-    }
-  };
-
-  // Shared card renderer to avoid duplication between desktop and mobile paths
-  const renderCard = (task, index) => (
-    <Draggable key={String(task.id)} draggableId={String(task.id)} index={index}>
-      {(provided, snapshot) => {
-        const cardStyle = {
-          ...provided.draggableProps.style,
-          zIndex: snapshot.isDragging ? 9999 : 'auto',
-        };
-        return (
-          <div
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-            className={`task-card ${styles.taskCard} ${task.hasWarning ? styles.warning : ''} ${snapshot.isDragging ? 'dragging' : ''}`}
-            style={cardStyle}
-          >
-            {/* Warning badge for status-fixed cards */}
-            {task.hasWarning && (
-              <div className={styles.warningBadge}>⚠️</div>
-            )}
-
-            {/* Task Title */}
-            <h3 className={styles.taskTitle}>{task.title}</h3>
-
-            {/* Task Footer */}
-            <div className={styles.taskFooter}>
-              {/* Assignee with Avatar */}
-              <div className={styles.assignee}>
-                <div className={`${styles.avatar} ${task.assignee === 'Unassigned' ? styles.unassigned : ''}`}>
-                  {getInitials(task.assignee)}
-                </div>
-                <span className={styles.assigneeName}>{task.assignee}</span>
-              </div>
-
-              {/* Estimate Badge */}
-              <span className={styles.estimateBadge}>{task.estimateHours}h</span>
-            </div>
-          </div>
-        );
-      }}
-    </Draggable>
-  );
-
-  // Shared column header renderer
-  const renderColumnHeader = (status, count, hours) => (
-    <div className={styles.columnHeader}>
-      <div className={styles.columnTitle}>
-        <div className={styles.statusDot} />
-        <h2 className={styles.columnName}>{status}</h2>
-      </div>
-      <div className={styles.columnMeta}>
-        <span className={styles.countBadge}>{count}</span>
-        <span className={styles.hoursBadge}>{hours}h</span>
-      </div>
-    </div>
-  );
-
-  // Shared empty state renderer
-  const renderEmptyState = (status) => (
-    <div className={styles.emptyState}>
-      <span className={styles.emptyStateIcon}>📝</span>
-      <span className={styles.emptyStateText}>
-        {searchInput || filters.assignees.length > 0 || filters.overdueOnly
-          ? 'No matching tasks'
-          : `No tasks in ${status}`}
-      </span>
-      <span className={styles.emptyStateHint}>
-        Drag a task here to get started
-      </span>
-    </div>
-  );
-
-  const hasActiveFilters = !!(searchInput || filters.assignees.length > 0 || filters.overdueOnly);
-
   return (
     <>
       <CursorSpotlight />
-      <div>
-        <Header onReset={handleReset} />
-        
-        {/* Mobile Tab Bar — each tab shows its live task count */}
+      <div className={styles.dashboard}>
+        {/* Fixed header — always on top */}
+        <Header />
+
+        {/* Fixed mobile tab bar — sits directly below the header */}
         <div className={styles.tabBar}>
-          {STATUS_ORDER.map(status => {
-            const isActive = activeTab === status;
-            const tabCount = getColumnCount(tasks, status);
-            return (
-              <button
-                key={status}
-                className={`${styles.tab} ${isActive ? styles.active : ''}`}
-                onClick={() => setActiveTab(status)}
-              >
-                {status}
-                <span className={`${styles.tabCount} ${isActive ? styles.tabCountActive : ''}`}>
-                  {tabCount}
-                </span>
-              </button>
-            );
-          })}
+          {STATUS_ORDER.map(status => (
+            <button
+              key={status}
+              className={`${styles.tab} ${activeTab === status ? styles.active : ''}`}
+              onClick={() => setActiveTab(status)}
+            >
+              {status}
+            </button>
+          ))}
         </div>
-        
+
         <main className={styles.container}>
           {/* Filter Bar */}
           <div className={styles.filterBar}>
@@ -278,13 +146,11 @@ const Dashboard = () => {
             <div className={styles.searchContainer}>
               <span className={styles.searchIcon}>🔍</span>
               <input 
-                id="task-search"
                 type="text" 
                 placeholder="Search tasks..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className={styles.searchInput}
-                aria-label="Search tasks"
               />
             </div>
             
@@ -297,10 +163,8 @@ const Dashboard = () => {
               />
             </div>
             
-            {/* Overdue Toggle — accessible button with switch role */}
-            <button
-              role="switch"
-              aria-checked={filters.overdueOnly}
+            {/* Overdue Toggle */}
+            <div 
               className={styles.filterControl}
               onClick={() => setFilters({ overdueOnly: !filters.overdueOnly })}
             >
@@ -308,16 +172,8 @@ const Dashboard = () => {
                 <div className={styles.toggleKnob} />
               </div>
               <span className={styles.filterLabel}>Overdue only</span>
-            </button>
-          </div>
-
-          {/* Active-filter notice — warns users that reorder drag is relative to filtered view */}
-          {hasActiveFilters && (
-            <div className={styles.filterNotice}>
-              <span>🔎</span>
-              <span>Filters active — column totals reflect full board. Card order changes apply to full column.</span>
             </div>
-          )}
+          </div>
           
           {/* Kanban Board */}
           <DragDropContext onDragEnd={handleDragEnd}>
@@ -325,16 +181,30 @@ const Dashboard = () => {
             {!isMobile && (
               <div className={styles.kanbanBoard}>
                 {STATUS_ORDER.map((status) => {
+                  // Use full tasks for count, hours, WIP
                   const count = getColumnCount(tasks, status);
                   const hours = getColumnHours(tasks, status);
                   const doneThisWeekHours = status === 'Done' ? getCompletedThisWeekHours(tasks) : null;
+                  
+                  // Use filtered tasks only for rendering visible cards
                   const columnTasksVisible = getColumnTasks(filteredTasks, status);
                   const statusClass = STATUS_CLASS_MAP[status];
                   
                   return (
                     <div key={status} className={`${styles.column} ${statusClass}`}>
-                      {renderColumnHeader(status, count, hours)}
+                      {/* Column Header */}
+                      <div className={styles.columnHeader}>
+                        <div className={styles.columnTitle}>
+                          <div className={styles.statusDot} />
+                          <h2 className={styles.columnName}>{status}</h2>
+                        </div>
+                        <div className={styles.columnMeta}>
+                          <span className={styles.countBadge}>{count}</span>
+                          <span className={styles.hoursBadge}>{hours}h</span>
+                        </div>
+                      </div>
                       
+                      {/* Done this week for Done column */}
                       {doneThisWeekHours !== null && (
                         <div className={styles.doneThisWeek}>
                           <span>📊</span>
@@ -342,6 +212,7 @@ const Dashboard = () => {
                         </div>
                       )}
                       
+                      {/* Droppable Zone */}
                       <Droppable droppableId={status}>
                         {(provided, snapshot) => (
                           <div
@@ -349,8 +220,66 @@ const Dashboard = () => {
                             {...provided.droppableProps}
                             ref={provided.innerRef}
                           >
-                            {columnTasksVisible.length === 0 && renderEmptyState(status)}
-                            {columnTasksVisible.map((task, index) => renderCard(task, index))}
+                            {/* Empty State */}
+                            {columnTasksVisible.length === 0 && (
+                              <div className={styles.emptyState}>
+                                <span className={styles.emptyStateIcon}>📝</span>
+                                <span className={styles.emptyStateText}>
+                                  {searchInput || filters.assignees.length > 0 || filters.overdueOnly 
+                                    ? 'No matching tasks' 
+                                    : `No tasks in ${status}`}
+                                </span>
+                                <span className={styles.emptyStateHint}>
+                                  Drag a task here to get started
+                                </span>
+                              </div>
+                            )}
+                            
+                            {/* Task Cards */}
+                            {columnTasksVisible.map((task, index) => (
+                              <Draggable key={String(task.id)} draggableId={String(task.id)} index={index}>
+                                {(provided, snapshot) => {
+                                  // Merge dnd styles with custom styles
+                                  const cardStyle = {
+                                    ...provided.draggableProps.style,
+                                    zIndex: snapshot.isDragging ? 9999 : 'auto',
+                                  };
+                                  
+                                  return (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={`task-card ${styles.taskCard} ${task.hasWarning ? styles.warning : ''} ${snapshot.isDragging ? 'dragging' : ''}`}
+                                    style={cardStyle}
+                                  >
+                                    {/* Warning badge for status-fixed cards */}
+                                    {task.hasWarning && (
+                                      <div className={styles.warningBadge}>⚠️</div>
+                                    )}
+                                    
+                                    {/* Task Title */}
+                                    <h3 className={styles.taskTitle}>{task.title}</h3>
+                                    
+                                    {/* Task Footer */}
+                                    <div className={styles.taskFooter}>
+                                      {/* Assignee with Avatar */}
+                                      <div className={styles.assignee}>
+                                        <div className={`${styles.avatar} ${task.assignee === 'Unassigned' ? styles.unassigned : ''}`}>
+                                          {getInitials(task.assignee)}
+                                        </div>
+                                        <span className={styles.assigneeName}>{task.assignee}</span>
+                                      </div>
+                                      
+                                      {/* Estimate Badge */}
+                                      <span className={styles.estimateBadge}>{task.estimateHours}h</span>
+                                    </div>
+                                  </div>
+                                );
+                                }}
+                              </Draggable>
+                            ))}
+                            
                             {provided.placeholder}
                           </div>
                         )}
@@ -367,17 +296,18 @@ const Dashboard = () => {
                 {STATUS_ORDER.map((status) => {
                   if (status !== activeTab) return null;
                   
+                  // Use full tasks for count, hours, WIP
                   const count = getColumnCount(tasks, status);
                   const hours = getColumnHours(tasks, status);
                   const doneThisWeekHours = status === 'Done' ? getCompletedThisWeekHours(tasks) : null;
+                  
+                  // Use filtered tasks only for rendering visible cards
                   const columnTasksVisible = getColumnTasks(filteredTasks, status);
                   const statusClass = STATUS_CLASS_MAP[status];
                   
                   return (
                     <div key={status} className={`${styles.column} ${statusClass}`}>
-                      {/* Column header shown on mobile too — fix for missing context */}
-                      {renderColumnHeader(status, count, hours)}
-
+                      {/* Done this week for Done column */}
                       {doneThisWeekHours !== null && (
                         <div className={styles.doneThisWeek}>
                           <span>📊</span>
@@ -385,6 +315,7 @@ const Dashboard = () => {
                         </div>
                       )}
                       
+                      {/* Droppable Zone */}
                       <Droppable droppableId={status}>
                         {(provided, snapshot) => (
                           <div
@@ -392,8 +323,66 @@ const Dashboard = () => {
                             {...provided.droppableProps}
                             ref={provided.innerRef}
                           >
-                            {columnTasksVisible.length === 0 && renderEmptyState(status)}
-                            {columnTasksVisible.map((task, index) => renderCard(task, index))}
+                            {/* Empty State */}
+                            {columnTasksVisible.length === 0 && (
+                              <div className={styles.emptyState}>
+                                <span className={styles.emptyStateIcon}>📝</span>
+                                <span className={styles.emptyStateText}>
+                                  {searchInput || filters.assignees.length > 0 || filters.overdueOnly 
+                                    ? 'No matching tasks' 
+                                    : `No tasks in ${status}`}
+                                </span>
+                                <span className={styles.emptyStateHint}>
+                                  Drag a task here to get started
+                                </span>
+                              </div>
+                            )}
+                            
+                            {/* Task Cards */}
+                            {columnTasksVisible.map((task, index) => (
+                              <Draggable key={String(task.id)} draggableId={String(task.id)} index={index}>
+                                {(provided, snapshot) => {
+                                  // Merge dnd styles with custom styles
+                                  const cardStyle = {
+                                    ...provided.draggableProps.style,
+                                    zIndex: snapshot.isDragging ? 9999 : 'auto',
+                                  };
+                                  
+                                  return (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={`task-card ${styles.taskCard} ${task.hasWarning ? styles.warning : ''} ${snapshot.isDragging ? 'dragging' : ''}`}
+                                    style={cardStyle}
+                                  >
+                                    {/* Warning badge for status-fixed cards */}
+                                    {task.hasWarning && (
+                                      <div className={styles.warningBadge}>⚠️</div>
+                                    )}
+                                    
+                                    {/* Task Title */}
+                                    <h3 className={styles.taskTitle}>{task.title}</h3>
+                                    
+                                    {/* Task Footer */}
+                                    <div className={styles.taskFooter}>
+                                      {/* Assignee with Avatar */}
+                                      <div className={styles.assignee}>
+                                        <div className={`${styles.avatar} ${task.assignee === 'Unassigned' ? styles.unassigned : ''}`}>
+                                          {getInitials(task.assignee)}
+                                        </div>
+                                        <span className={styles.assigneeName}>{task.assignee}</span>
+                                      </div>
+                                      
+                                      {/* Estimate Badge */}
+                                      <span className={styles.estimateBadge}>{task.estimateHours}h</span>
+                                    </div>
+                                  </div>
+                                );
+                                }}
+                              </Draggable>
+                            ))}
+                            
                             {provided.placeholder}
                           </div>
                         )}
@@ -430,11 +419,6 @@ const AssigneeDropdown = ({ assignees, selectedAssignees, onToggle }) => {
       <div 
         className={styles.filterControl}
         onClick={() => setIsOpen(!isOpen)}
-        role="button"
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsOpen(!isOpen); }}
       >
         <span className={styles.filterIcon}>👤</span>
         <span className={styles.filterLabel}>
@@ -443,13 +427,11 @@ const AssigneeDropdown = ({ assignees, selectedAssignees, onToggle }) => {
         <span className={`${styles.filterChevron} ${isOpen ? styles.open : ''}`}>▼</span>
         
         {isOpen && (
-          <div className={styles.assigneeMenu} role="listbox">
+          <div className={styles.assigneeMenu}>
             {assignees.map(assignee => (
               <div 
                 key={assignee}
                 className={`${styles.assigneeOption} ${selectedAssignees.includes(assignee) ? styles.selected : ''}`}
-                role="option"
-                aria-selected={selectedAssignees.includes(assignee)}
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggle(assignee);
@@ -460,8 +442,6 @@ const AssigneeDropdown = ({ assignees, selectedAssignees, onToggle }) => {
                   checked={selectedAssignees.includes(assignee)}
                   onChange={() => {}}
                   className={styles.assigneeCheckbox}
-                  tabIndex={-1}
-                  aria-hidden="true"
                 />
                 <span className={styles.assigneeName}>{assignee}</span>
               </div>

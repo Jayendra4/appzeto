@@ -1,30 +1,62 @@
 /* Premium Floating Command Center */
 
+/*
+  Layout contract:
+  - Desktop: height ~74px, sits at top:0 with 12px horizontal inset via padding
+  - Mobile (≤900px): height ~60px, same approach
+  - Mobile (≤480px): height ~52px
+  The floating look comes from border-radius + shadow + horizontal padding,
+  NOT from a top offset (which would create a gap above the navbar).
+*/
+
 .header {
-  position: sticky;
-  top: 24px;
-  z-index: 50;
-  margin: 0 32px;
-  padding: 16px 28px;
-  background: rgba(18, 18, 20, 0.75);
-  backdrop-filter: blur(32px);
-  -webkit-backdrop-filter: blur(32px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
-  box-shadow: 
-    0 25px 50px -12px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
-    0 0 80px -20px rgba(139, 92, 246, 0.15);
-  transition: all var(--transition-slow);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  /* Horizontal inset creates the floating-pill appearance */
+  padding: 0 12px;
+  /* Inner padding is on .container so the glass pill has breathing room */
 }
 
-.header:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 
-    0 30px 60px -12px rgba(0, 0, 0, 0.8),
+/* The actual glass pill */
+.headerInner {
+  padding: 10px 24px;
+  background: rgba(10, 10, 15, 0.92);
+  backdrop-filter: blur(48px) saturate(180%);
+  -webkit-backdrop-filter: blur(48px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  /* Only round the bottom corners — top edge touches the browser chrome */
+  border-top: none;
+  border-radius: 0 0 20px 20px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 6px 24px -8px rgba(0, 0, 0, 0.85),
+    0 16px 40px -12px rgba(0, 0, 0, 0.6),
+    0 0 60px -20px rgba(139, 92, 246, 0.10);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Solid backing layer — prevents any content from bleeding through */
+.headerInner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(8, 8, 12);
+  opacity: 0.82;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.headerInner:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.08) inset,
-    0 0 100px -25px rgba(139, 92, 246, 0.2);
-  transform: translateY(-2px);
+    0 8px 32px -8px rgba(0, 0, 0, 0.9),
+    0 24px 48px -12px rgba(0, 0, 0, 0.7),
+    0 0 100px -25px rgba(139, 92, 246, 0.18);
 }
 
 .container {
@@ -46,27 +78,28 @@
 }
 
 .logo {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--color-backlog-accent) 0%, var(--color-in-progress-accent) 50%, var(--color-done-accent) 100%);
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #10b981 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 800;
-  font-size: 20px;
-  box-shadow: 
-    0 8px 24px -12px var(--color-backlog-accent),
-    0 0 40px -20px var(--color-backlog-accent);
-  transition: all var(--transition-spring);
+  font-size: 17px;
+  box-shadow:
+    0 6px 18px -10px rgba(139, 92, 246, 0.6),
+    0 0 30px -18px rgba(139, 92, 246, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
 }
 
 .branding:hover .logo {
   transform: translateY(-2px) scale(1.04) rotate(4deg);
-  box-shadow: 
-    0 12px 32px -14px var(--color-in-progress-accent),
-    0 0 60px -24px var(--color-in-progress-accent);
+  box-shadow:
+    0 12px 32px -14px rgba(59, 130, 246, 0.7),
+    0 0 60px -24px rgba(59, 130, 246, 0.5);
 }
 
 .brandText {
@@ -77,11 +110,12 @@
 
 .brandTitle {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.02em;
-  color: var(--color-text-primary);
-  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  color: var(--text-primary);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
 }
 
 /* Controls */
@@ -95,27 +129,27 @@
 /* Action Buttons Container */
 .actionButtons {
   display: flex;
-  gap: 6px;
+  gap: 2px;
   background: rgba(255, 255, 255, 0.03);
-  padding: 6px;
-  border-radius: 16px;
-  border: 1px solid var(--color-border-subtle);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .actionButton {
-  padding: 10px 16px;
+  padding: 7px 13px;
   border: none;
-  border-radius: 12px;
+  border-radius: 9px;
   background: transparent;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: all var(--transition-fast);
+  gap: 6px;
+  transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .actionButton:disabled {
@@ -125,39 +159,39 @@
 
 .actionButton:not(:disabled):hover {
   background: rgba(255, 255, 255, 0.08);
-  color: var(--color-text-primary);
+  color: var(--text-primary);
   transform: translateY(-1px);
 }
 
 .actionButton.active {
   background: rgba(255, 255, 255, 0.1);
-  color: var(--color-text-primary);
+  color: var(--text-primary);
   box-shadow: var(--shadow-sm);
 }
 
 .actionButtonIcon {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 /* Reset Button */
 .resetButton {
-  padding: 10px 18px;
-  border: 1px solid var(--color-danger-light);
-  border-radius: 14px;
-  background: rgba(239, 68, 68, 0.08);
-  color: var(--color-danger);
+  padding: 7px 14px;
+  border: 1px solid rgba(239, 68, 68, 0.20);
+  border-radius: 11px;
+  background: rgba(239, 68, 68, 0.06);
+  color: #ef4444;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all var(--transition-fast);
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .resetButton:hover {
   background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.35);
   transform: translateY(-1px);
   box-shadow: 0 8px 24px -10px rgba(239, 68, 68, 0.3);
 }
@@ -173,10 +207,10 @@
   gap: 12px;
   background: rgba(16, 185, 129, 0.1);
   padding: 8px 16px;
-  border-radius: var(--radius-full);
+  border-radius: 9999px;
   border: 1px solid rgba(16, 185, 129, 0.2);
   box-shadow: 0 4px 20px -8px rgba(16, 185, 129, 0.2);
-  transition: all var(--transition-fast);
+  transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .healthBadge:hover {
@@ -187,15 +221,15 @@
 .healthIndicator {
   width: 24px;
   height: 24px;
-  border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--color-done-accent) 0%, #059669 100%);
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 12px;
   font-weight: 800;
-  box-shadow: 0 4px 12px -4px var(--color-done-accent);
+  box-shadow: 0 4px 12px -4px rgba(16, 185, 129, 0.5);
 }
 
 .healthText {
@@ -212,65 +246,65 @@
   display: none;
 }
 
-/* Responsive Header */
+/* Desktop only items */
+.desktopOnly {
+  display: block;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────── */
+
 @media (max-width: 900px) {
-  .header {
-    margin: 16px;
-    padding: 14px 20px;
-    border-radius: 24px;
+  .desktopOnly {
+    display: none;
   }
-  
+
+  .headerInner {
+    padding: 9px 16px;
+    border-radius: 0 0 16px 16px;
+  }
+
   .logo {
-    width: 38px;
-    height: 38px;
-    font-size: 18px;
-  }
-  
-  .brandTitle {
+    width: 30px;
+    height: 30px;
     font-size: 15px;
+    border-radius: 9px;
   }
-  
+
+  .brandTitle {
+    font-size: 13px;
+  }
+
   .container {
-    justify-content: center;
-    gap: 16px;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: nowrap;
   }
-  
+
   .controls {
-    justify-content: center;
-    gap: 8px;
+    gap: 6px;
+    flex-wrap: nowrap;
   }
-  
+
   .actionButtons {
-    gap: 4px;
-    padding: 4px;
-    border-radius: 14px;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 10px;
   }
-  
+
   .actionButton {
-    padding: 10px 14px;
-    font-size: 13px;
-  }
-  
-  .resetButton {
-    padding: 10px 16px;
-    font-size: 13px;
-  }
-  
-  .healthBadge {
-    padding: 8px 14px;
-    gap: 8px;
-  }
-  
-  .healthIndicator {
-    width: 22px;
-    height: 22px;
+    padding: 6px 10px;
     font-size: 12px;
   }
-  
+
+  .resetButton {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
   .healthTextDesktop {
     display: none;
   }
-  
+
   .healthTextMobile {
     display: inline;
   }
@@ -278,28 +312,30 @@
 
 @media (max-width: 480px) {
   .header {
-    margin: 8px;
-    padding: 10px;
+    padding: 0 6px;
+  }
+
+  .headerInner {
+    padding: 8px 12px;
+    border-radius: 0 0 14px 14px;
   }
 
   .container {
-    gap: 10px;
-  }
-  
-  .controls {
-    width: 100%;
-    justify-content: center;
     gap: 6px;
   }
-  
+
+  .controls {
+    gap: 4px;
+  }
+
   .actionButton {
     padding: 6px 8px;
   }
-  
+
   .actionButton .actionButtonText {
     display: none;
   }
-  
+
   .resetButton {
     padding: 6px 8px;
   }
@@ -307,13 +343,14 @@
   .resetButton .resetButtonText {
     display: none;
   }
-}
-.desktopOnly {
-  display: block;
-}
 
-@media (max-width: 900px) {
-  .desktopOnly {
-    display: none;
+  .brandTitle {
+    font-size: 12px;
+  }
+
+  .logo {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
   }
 }
